@@ -404,6 +404,26 @@ cümlesi korunuyor.
 
 Deneyin kendisi başarılıydı (soğuk çağrı, arka plana alınma, diff, kapanış); başarısız olan sıcak çağrının
 nedeni yukarıdaki iki hata. README'deki sınır cümlesi, düzeltilmiş kodla sıcak çağrı da gözlenene kadar
-korunuyor. Bir sonraki gerçek kullanımda beklenen: ikinci çağrı `cold_started=false` ve saniyeler içinde. Önerilen düzeltmeler: sessions_json için betik dosyası üzerinden okuma (tırnaksız) veya
+korunuyor. Bir sonraki gerçek kullanımda beklenen: ikinci çağrı `cold_started=false` ve saniyeler içinde.
+
+### Faz 6 — v0.1.1 ile soğuk → sıcak zinciri (2026-10-11, 01:51 → 02:04)
+
+Yol: tek MCP sunucu süreci, stdio istemcisi (`experiments/faz6/chain.py`; Claude Code'un yolu, yalnız arka
+plana alma davranışı bu istemcide yok, o Faz 5'te gözlendi). Önce günlük soğuk başlatma sınırı (4) deneyi
+reddetti (son 24 saatte 4 başlatma vardı) — koruma çalıştı; sınır deney süresince 5'e çekildi, sonra 4'e döndü.
+
+| Ölçüm | Sonuç |
+|---|---|
+| T0 | 01:51:04, bakiye 193.24, aktif atama 0, stage down |
+| 1. çağrı (budget.py docstring) | **cold_started=true**, duvar saati **739.5 sn** (12.3 dk), ajan 14.6 sn, 3 tur / 3 araç / 0 hata, 1 diff 2 edit, apply_check 0 |
+| Endpoint E1 | `gpu-a100-s-kkb-ass1c1-rax6nfede6zl`; usage: aktif atama 1, 5.3/hr; gözetmen ready, lease_count 1 |
+| 2. çağrı (agents.py docstring), 1. bittikten 26 sn sonra | **cold_started=false**, duvar saati **25.9 sn**, 3 tur / 5 araç / 0 hata, 1 diff 4 edit, apply_check 0 |
+| 2. çağrı sonrası | endpoint **E1 ile aynı**, aktif atama **1** (ikinci tahsis yok) |
+| colab_sleep | released_verified **true**, endpoint **E1**, tahsis 12.9 dk, tahmin 1.14 birim |
+| Son | stage down, endpoint null, aktif atama 0, oran 0.0 |
+| Diff doğrulama | İki diff `git apply --check` ve `git apply` temiz; 6 docstring doğru ve yerinde; Claude düzeltme ihtiyacı **0**; ilgili testler geçti |
+| Tüketim | Bakiye 193.24 → 192.48 = **0.76 birim** (görüntülenen; tahsis süresine göre tahmin 1.14, bakiye gösterimi gecikmeli olabilir) |
+
+**Sonuç: zincir 6/6 ölçütte geçti.** README'deki sınır kaldırıldı. Önerilen düzeltmeler: sessions_json için betik dosyası üzerinden okuma (tırnaksız) veya
 `colab sessions` çıktısını tek kaynak yapmak; `_SESS` regex'ini adlı satırlarla test etmek; sıcak yolu
 GPU açmadan sahte CLI çıktısıyla regresyona bağlamak.

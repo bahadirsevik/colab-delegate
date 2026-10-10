@@ -10,7 +10,8 @@ run on a real A100 (warmed via the CLI) with three real refactoring tasks: 3/3 d
 were correct, ~1.4 compute units including the 12-minute cold start. A cold `colab_delegate` call from
 inside Claude Code was exercised end-to-end (wake, auto-backgrounding, diff delivery); the follow-up warm
 call exposed a double-allocation bug fixed in v0.1.1. The cold → warm chain (same endpoint, no second
-allocation, verified release) has not yet been observed with v0.1.1 (see `docs/phase0-findings.md`).
+allocation, verified release) was observed with v0.1.1 on 2026-10-11: cold call 12.3 min, warm call 26 s,
+one runtime throughout, released and verified (see `docs/phase0-findings.md`).
 
 ## What you get
 

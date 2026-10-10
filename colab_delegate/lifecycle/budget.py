@@ -17,6 +17,7 @@ class WakeDecision:
 
 
 def can_wake(balance: float, state: RuntimeState, cfg: LifecycleCfg, gpu: str) -> WakeDecision:
+    """Decide whether the instance may be woken given balance and daily limits."""
     if balance < cfg.min_units_to_wake:
         return WakeDecision(False, f"balance {balance:.2f} < min_units_to_wake {cfg.min_units_to_wake}")
     n = state.cold_starts_today()
@@ -29,5 +30,6 @@ def can_wake(balance: float, state: RuntimeState, cfg: LifecycleCfg, gpu: str) -
 
 
 def estimate_units(gpu: str, minutes: float, measured_rate: float | None = None) -> float:
+    """Estimate compute units for a session of the given length on a GPU."""
     rate = measured_rate if measured_rate else APPROX_UNITS_PER_HOUR.get(gpu, 5.0)
     return round(rate * minutes / 60.0, 2)

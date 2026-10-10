@@ -27,6 +27,7 @@ class AgentDef:
 
 
 def parse_agent(text: str, source: str) -> AgentDef:
+    """Parse agent Markdown with frontmatter into an AgentDef."""
     m = _FM.match(text)
     if m:
         meta = yaml.safe_load(m.group(1)) or {}
@@ -43,10 +44,12 @@ def parse_agent(text: str, source: str) -> AgentDef:
 
 
 def agent_dirs(workdir: Path) -> list[Path]:
+    """Return the agent search directories in lookup order."""
     return [Path(workdir) / ".colab-delegate" / "agents", HOME_DIR / "agents", BUNDLED_DIR]
 
 
 def load_agent(name: str, workdir: Path) -> AgentDef:
+    """Load a single agent by name from the search directories."""
     if not re.fullmatch(r"[A-Za-z0-9_\-]+", name):
         raise ValueError(f"bad agent name: {name}")
     for d in agent_dirs(workdir):
@@ -57,6 +60,7 @@ def load_agent(name: str, workdir: Path) -> AgentDef:
 
 
 def list_agents(workdir: Path) -> list[AgentDef]:
+    """List all agents found in the search directories."""
     seen: dict[str, AgentDef] = {}
     for d in agent_dirs(workdir):
         if not d.is_dir():
