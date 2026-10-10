@@ -1,0 +1,43 @@
+[project]
+name = "colab-delegate"
+version = "0.1.0.dev0"
+description = "Delegate mechanical coding work from Claude Code to an open model on your own Google Colab GPU, with wake-on-demand and self-releasing runtimes."
+readme = "README.md"
+requires-python = ">=3.11,<3.14"
+license = { text = "MIT" }
+dependencies = [
+    "mcp>=2.0",
+    "pydantic>=2.6",
+    "pyyaml>=6.0",
+    "httpx>=0.27",
+    "typer>=0.12",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "pytest-asyncio>=0.23", "ruff>=0.5"]
+
+[project.scripts]
+colab-delegate = "colab_delegate.cli:app"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["colab_delegate"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+
+[tool.ruff]
+line-length = 110
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+ignore = ["E501", "B008", "B904", "UP007"]
+
+[tool.ruff.lint.per-file-ignores]
+"colab_delegate/vm/*" = ["UP"]       # stdlib-only scripts that must run on Colab's python
+"experiments/**" = ["ALL"]

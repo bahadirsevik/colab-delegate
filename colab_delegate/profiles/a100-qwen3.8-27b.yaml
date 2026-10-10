@@ -1,0 +1,21 @@
+# Faz 2'de A100 40GB uzerinde olculen profil (2026-10-10).
+# Soguk baslatma ~11.5 dk, uretim ~40 tok/s, prefill ~2.4k tok/s, KV 64k token @32k.
+colab:
+  gpu: A100
+engine:
+  kind: vllm
+  model: Qwen/Qwen3.8-27B-FP8
+  revision: 017b9c7af6b5689d5dd426a76e0bc077eb5ca20a
+  served_name: delegate
+  max_model_len: 32768
+  max_num_seqs: 1
+  gpu_memory_utilization: 0.90
+  tool_call_parser: qwen3_coder
+  reasoning_parser: qwen3
+  enable_thinking: false
+  vllm_version: "0.31.0"
+lifecycle:
+  idle_minutes: 10
+  boot_timeout_minutes: 25
+agent:
+  context_budget_tokens: 24000

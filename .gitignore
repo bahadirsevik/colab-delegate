@@ -1,0 +1,17 @@
+# experiment outputs: contain session tokens and local logs; never commit
+experiments/**/results/
+*.log
+*.diff
+
+# python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.ruff_cache/
+dist/
+build/
+*.egg-info/
+
+# local state
+.colab-delegate/

@@ -1,0 +1,21 @@
+# Faz 2'de ayni oturumda olculen aday B. Topluluk kuantizasyonu (compressed-tensors AWQ 4-bit).
+# vLLM baslangici ~150 sn, uretim ~128 tok/s, prefill ~6.9k tok/s, KV 193k token @32k.
+colab:
+  gpu: A100
+engine:
+  kind: vllm
+  model: cyankiwi/Qwen3-Coder-30B-A3B-Instruct-AWQ-4bit
+  revision: 4bd30395b72ea6045edd04806c4fea448d4467b3
+  served_name: delegate
+  max_model_len: 32768
+  max_num_seqs: 1
+  gpu_memory_utilization: 0.90
+  tool_call_parser: qwen3_coder
+  reasoning_parser: null
+  enable_thinking: null
+  vllm_version: "0.31.0"
+lifecycle:
+  idle_minutes: 8
+  boot_timeout_minutes: 20
+agent:
+  context_budget_tokens: 24000

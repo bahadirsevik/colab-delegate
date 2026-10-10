@@ -1,0 +1,20 @@
+# OLCULMEDI. Ucretsiz/T4 kullanicilari icin baslangic profili; ilk calistirmada dogrulanmali.
+colab:
+  gpu: T4
+engine:
+  kind: vllm
+  model: Qwen/Qwen2.5-Coder-7B-Instruct-AWQ
+  revision: main
+  served_name: delegate
+  max_model_len: 16384
+  max_num_seqs: 1
+  gpu_memory_utilization: 0.90
+  tool_call_parser: hermes
+  reasoning_parser: null
+  enable_thinking: null
+  vllm_version: "0.31.0"
+lifecycle:
+  idle_minutes: 6
+  boot_timeout_minutes: 20
+agent:
+  context_budget_tokens: 12000
