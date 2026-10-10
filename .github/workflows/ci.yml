@@ -23,9 +23,17 @@ jobs:
       - name: Lint
         run: ruff check colab_delegate tests
       - name: Test (no GPU, no Colab; real supervisor runs locally, Colab CLI is faked)
-        run: python -m pytest -q -o faulthandler_timeout=300
+        shell: bash
+        run: |
+          set -o pipefail
+          python -m pytest -q -ra -o faulthandler_timeout=300 2>&1 | tee pytest.log
         env:
           GIT_CONFIG_GLOBAL: /dev/null
+      - name: Failure summary (visible without log access)
+        if: failure()
+        shell: bash
+        run: |
+          { echo '### pytest short summary'; echo '```'; grep -E "^(FAILED|ERROR)|short test summary|passed|failed" pytest.log | tail -40; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
   build:
     runs-on: ubuntu-latest
     steps:

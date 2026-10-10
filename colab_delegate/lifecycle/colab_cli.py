@@ -113,11 +113,19 @@ class ColabCli:
         return [self.cfg.colab_bin, *args]
 
     def to_remote_path(self, p: str | Path) -> str:
-        """Host path -> path as the CLI process sees it (WSL: /mnt/c/...)."""
-        p = Path(p).resolve()
+        """Host path -> path as the CLI process sees it (WSL backend: C:\\x\\y -> /mnt/c/x/y).
+        Pure string translation for the WSL case so it behaves the same on every host platform
+        (Path.resolve() on Linux would treat 'C:\\...' as a relative path)."""
         if self.backend != "wsl":
-            return str(p)
-        w = PureWindowsPath(p)
+            return str(Path(p).resolve())
+        s = str(p)
+        if s.startswith("/"):                 # already a POSIX/WSL path: never resolve on Windows
+            return s
+        if sys.platform == "win32":
+            s = str(Path(s).resolve())
+        w = PureWindowsPath(s)
+        if not w.drive:                       # relative without drive: just normalise separators
+            return s.replace("\\", "/")
         drive = w.drive.rstrip(":").lower()
         rest = "/".join(w.parts[1:])
         return f"/mnt/{drive}/{rest}"

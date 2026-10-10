@@ -1,5 +1,3 @@
-from pathlib import PureWindowsPath
-
 import pytest
 
 from colab_delegate.config import ColabCfg
@@ -47,9 +45,10 @@ def test_parse_status_new_stop():
 def test_wsl_argv_and_path_translation():
     cli = ColabCli(ColabCfg(backend="wsl", wsl_distro="Ubuntu-24.04", wsl_user="root", wsl_colab_bin="/root/.local/bin/colab"))
     assert cli._argv(["usage"]) == ["wsl.exe", "-d", "Ubuntu-24.04", "-u", "root", "--", "/root/.local/bin/colab", "usage"]
-    p = cli.to_remote_path(r"C:\Users\kanar\x\y.py") if PureWindowsPath(r"C:\x").drive else None
-    if p is not None:
-        assert p.startswith("/mnt/c/") and p.endswith("x/y.py")
+    # pure string translation: must give the same answer on Windows, Linux and macOS hosts
+    assert cli.to_remote_path(r"C:\Users\someone\x\y.py") == "/mnt/c/Users/someone/x/y.py"
+    assert cli.to_remote_path(r"D:\a\b") == "/mnt/d/a/b"
+    assert cli.to_remote_path("/mnt/c/already/posix") == "/mnt/c/already/posix"
 
 
 def test_native_argv():
