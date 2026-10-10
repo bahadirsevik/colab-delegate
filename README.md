@@ -5,7 +5,7 @@ Colab GPU**. The runtime wakes on demand, is reached only through the official C
 (no public endpoint, no third-party tunnel), and releases itself when idle so compute units are not
 wasted. The remote model is **read-only**: it returns proposed diffs that Claude reviews and applies.
 
-Status: **pre-release (Phase 3 done).** Lifecycle validated on CPU and A100 runtimes; `colab_delegate`
+Status: **v0.1.0 (early release).** Lifecycle validated on CPU and A100 runtimes; `colab_delegate`
 run on a real A100 (warmed via the CLI) with three real refactoring tasks: 3/3 diffs applied cleanly and
 were correct, ~1.4 compute units including the 12-minute cold start. A single cold `colab_delegate` call
 from inside Claude Code is not yet exercised end-to-end (see `docs/phase0-findings.md`).
