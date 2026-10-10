@@ -2,7 +2,7 @@
 # Faz 1 ek senaryolar (CPU). Kullanim: scenarios.sh <S1|S2|S3|S4>
 set -u
 export PATH="$HOME/.local/bin:$PATH"
-HERE="/mnt/c/Users/kanar/Downloads/Digitus-Last/colab-delegate/experiments/faz1"
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 H="$HERE/host_exp.sh"; RES="$HERE/results"; mkdir -p "$RES"
 say() { echo "[$(date +%H:%M:%S)] [$1] $2" | tee -a "$RES/scenarios.log"; }
 

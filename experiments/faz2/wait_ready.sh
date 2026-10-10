@@ -2,7 +2,7 @@
 # vLLM /health (tunel 18000) 200 donene kadar bekle, sonra gozetmene POST /ready.
 # Guvenlik: DEADLINE (epoch) gecilirse boot_timeout'tan once erken /ready gonder (sapma olarak logla).
 set -u
-RES="/mnt/c/Users/kanar/Downloads/Digitus-Last/colab-delegate/experiments/faz2/results"
+RES="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/results"
 DEADLINE="${1:-0}"; t0=$(date +%s)
 say() { echo "[$(date +%H:%M:%S)] $*" | tee -a "$RES/faz2.log"; }
 say "wait_ready start (deadline epoch=$DEADLINE)"

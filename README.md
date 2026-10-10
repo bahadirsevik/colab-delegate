@@ -36,7 +36,7 @@ Not on PyPI yet; install from a clone:
 
 ```bash
 uv tool install google-colab-cli && colab --auth oauth2 usage     # one-time login (copy-paste flow)
-git clone https://github.com/<you>/colab-delegate && cd colab-delegate
+git clone https://github.com/bahadirsevik/colab-delegate && cd colab-delegate
 python -m pip install .                                           # or: pip install -e ".[dev]" to hack on it
 colab-delegate init --profile a100-qwen3.8-27b
 colab-delegate doctor

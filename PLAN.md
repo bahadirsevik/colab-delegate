@@ -4,7 +4,7 @@ Tarih: 2026-10-10 (v2: Codex incelemesi sonrası revize)
 Durum: **Faz 0-3 tamamlandı** (bkz. docs/phase0-findings.md). Gerçek A100'de uçtan uca `colab_delegate`
 çalıştı; 3 gerçek iş 3/3 uygulanabilir ve doğru, Claude düzeltmesi 0, ~1.4 birim. Sırada Faz 4
 (paketleme, CI, README son hali, v0.1.0).
-Konum: `C:\Users\kanar\Downloads\Digitus-Last\colab-delegate` (Digitus reposundan bağımsız)
+Konum: https://github.com/bahadirsevik/colab-delegate (Digitus reposundan bağımsız)
 
 v1'den v2'ye değişen ana kararlar: (1) kapsam küçüldü, önce ölçüm sonra ürün; (2) ağ
 katmanı Tailscale yerine resmi `colab ssh` köprüsü üzerinden yerel port yönlendirme;

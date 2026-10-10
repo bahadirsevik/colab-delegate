@@ -9,7 +9,10 @@ import urllib.request
 
 TAG = sys.argv[1]
 BASE = sys.argv[2] if len(sys.argv) > 2 else "http://127.0.0.1:18000"
-OUT = f"/mnt/c/Users/kanar/Downloads/Digitus-Last/colab-delegate/experiments/faz2/results/bench_{TAG}.json"
+from pathlib import Path  # noqa: E402
+
+OUT = str(Path(__file__).resolve().parent / "results" / f"bench_{TAG}.json")
+Path(OUT).parent.mkdir(exist_ok=True)
 
 
 def chat(messages, max_tokens=256, tools=None, temperature=0.0):

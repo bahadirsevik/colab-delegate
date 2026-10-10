@@ -4,7 +4,7 @@
 # Ciktilar experiments/faz1/results/ altina yazilir.
 set -u
 export PATH="$HOME/.local/bin:$PATH"
-HERE="/mnt/c/Users/kanar/Downloads/Digitus-Last/colab-delegate/experiments/faz1"
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 RES="$HERE/results"; mkdir -p "$RES"
 S="${2:-cdtest}"
 TOKEN="test-token"

@@ -2,8 +2,8 @@
 # Faz 2: gozetimli tek A100 olcum oturumu. Adimlar ayri cagrilir: faz2.sh <adim> [arg]
 set -u
 export PATH="$HOME/.local/bin:$PATH"
-F1="/mnt/c/Users/kanar/Downloads/Digitus-Last/colab-delegate/experiments/faz1"
-F2="/mnt/c/Users/kanar/Downloads/Digitus-Last/colab-delegate/experiments/faz2"
+F2="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+F1="$F2/../faz1"
 RES="$F2/results"; mkdir -p "$RES"
 S="cdgpu"; TOKEN="test-token"
 SESSIONS_JSON="$HOME/.config/colab-cli/sessions.json"

@@ -5,6 +5,19 @@ description = "Delegate mechanical coding work from Claude Code to an open model
 readme = "README.md"
 requires-python = ">=3.11,<3.14"
 license = { text = "MIT" }
+authors = [{ name = "Bahadır Şevik" }]
+keywords = ["claude-code", "mcp", "google-colab", "vllm", "llm-agents", "gpu"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Topic :: Software Development :: Code Generators",
+]
+
+[project.urls]
+Homepage = "https://github.com/bahadirsevik/colab-delegate"
+Repository = "https://github.com/bahadirsevik/colab-delegate"
+Issues = "https://github.com/bahadirsevik/colab-delegate/issues"
 dependencies = [
     "mcp>=2.0",
     "pydantic>=2.6",

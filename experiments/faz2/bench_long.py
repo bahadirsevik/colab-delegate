@@ -4,9 +4,13 @@ import sys
 import time
 import urllib.request
 
+from pathlib import Path  # noqa: E402
+
 TAG = sys.argv[1]
+SRC_FILE = sys.argv[2] if len(sys.argv) > 2 else None   # a real source file (~5k chars) for the patch test
 BASE = "http://127.0.0.1:18000"
-OUT = f"/mnt/c/Users/kanar/Downloads/Digitus-Last/colab-delegate/experiments/faz2/results/bench_long_{TAG}.json"
+OUT = str(Path(__file__).resolve().parent / "results" / f"bench_long_{TAG}.json")
+Path(OUT).parent.mkdir(exist_ok=True)
 
 
 def chat(messages, max_tokens):
@@ -27,7 +31,12 @@ u = d["usage"]
 R["gen_long"] = {"elapsed": d["_elapsed"], "completion_tokens": u["completion_tokens"],
                  "tok_per_s": round(u["completion_tokens"] / d["_elapsed"], 1), "finish": d["choices"][0]["finish_reason"]}
 
-src = open("/mnt/c/Users/kanar/Downloads/Digitus-Last/Digitus-Engine-lean/app/core/workspace.py", encoding="utf-8").read()
+if not SRC_FILE:
+    with open(OUT, "w") as f:
+        json.dump(R, f, indent=2, ensure_ascii=False)
+    print(json.dumps(R, indent=2, ensure_ascii=False))
+    sys.exit(0)
+src = open(SRC_FILE, encoding="utf-8").read()
 d = chat([{"role": "system", "content": "Sen salt-okunur bir kod asistanisin. Dosyayi degistiremezsin; yalniz unified diff onerirsin."},
           {"role": "user", "content": "Asagidaki dosyadaki her public fonksiyona (altcizgiyle baslamayan) eksikse kisa Turkce docstring ekle. YALNIZ unified diff dondur.\n\n--- app/core/workspace.py ---\n" + src}], 1500)
 u = d["usage"]
