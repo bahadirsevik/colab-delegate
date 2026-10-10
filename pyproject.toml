@@ -1,6 +1,6 @@
 [project]
 name = "colab-delegate"
-version = "0.1.0"
+version = "0.1.1"
 description = "Delegate mechanical coding work from Claude Code to an open model on your own Google Colab GPU, with wake-on-demand and self-releasing runtimes."
 readme = "README.md"
 requires-python = ">=3.11,<3.14"
