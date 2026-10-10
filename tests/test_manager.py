@@ -66,6 +66,9 @@ class FakeCli:
     def is_assigned_by_name(self, name):
         return name in self.assigned
 
+    def endpoint_by_name(self, name):
+        return self.assigned.get(name)
+
     def bridge_shell(self, script, timeout=30):
         class R:
             rc, out, err = 0, "", ""
@@ -217,7 +220,7 @@ def test_status_poll_timeouts_are_not_fatal(tmp_path, local_supervisor):
     m = make_mgr(tmp_path, cli, local_supervisor, wake_timeout_minutes=2)
 
     async def go():
-        ready_soon(m)
+        ready_soon(m, 5.0)   # late enough that at least one (failing) status poll happens first, even under load
         return await m.ensure_up()
     r = run(go())
     assert r["cold_started"] is True
@@ -352,7 +355,8 @@ def test_unreadable_endpoint_plus_failed_stop_is_unknown_not_down(tmp_path, loca
         cli.calls.append(("stop", name))
         raise ColabCliError("backend 503")
     cli.stop = failing_stop
-    cli.is_assigned_by_name = lambda name: None               # backend queries failing too
+    # backend queries work until the allocation happened, then start failing (stop-time outage)
+    cli.is_assigned_by_name = lambda name: None if any(c[0] == "new" for c in cli.calls) else False
     m = make_mgr(tmp_path, cli, local_supervisor)
 
     async def go():
@@ -378,6 +382,58 @@ def test_unreadable_endpoint_plus_failed_stop_is_unknown_not_down(tmp_path, loca
     assert st1.stage == "unknown" and st1.last_error and "endpoint unknown" in st1.last_error
     assert "cannot query" in err
     assert r["cold_started"] and len([c for c in calls if c[0] == "new"]) == 2
+
+
+def test_never_allocates_while_backend_lists_our_session(tmp_path, local_supervisor):
+    """Faz 5 regression (the double-A100 incident): state lost the endpoint, tunnel is down, but the backend
+    still lists '[colab-delegate] gpu-x'. ensure_up must NOT call `colab new`."""
+    cli = FakeCli()
+    cli.assigned["colab-delegate"] = "gpu-a100-live"          # live runtime on the backend
+    m = make_mgr(tmp_path, cli, local_supervisor)
+    with m.store.update() as s:                                # what the broken state looked like
+        s.stage, s.session_name, s.endpoint, s.started_at = "ready", "colab-delegate", None, time.time() - 600
+    m.engine_healthy = lambda: asyncio.sleep(0, result=False)  # tunnel dead
+    m.fwd.wait_healthy = lambda t=60: False
+
+    async def go():
+        try:
+            await m.ensure_up()
+            raise AssertionError("expected WakeError")
+        except mgr_mod.WakeError as e:
+            return str(e), m.store.load()
+    err, st = run(go())
+    assert "still assigned" in err or "already exists" in err
+    assert not any(c[0] == "new" for c in cli.calls)           # no second allocation
+    assert cli.assigned == {"colab-delegate": "gpu-a100-live"}  # untouched
+    assert st.endpoint in (None, "gpu-a100-live")
+
+
+def test_cold_start_guard_refuses_when_name_exists(tmp_path, local_supervisor):
+    """Even with a clean local state, an existing backend session with our name blocks allocation."""
+    cli = FakeCli()
+    cli.assigned["colab-delegate"] = "gpu-a100-orphan"
+    m = make_mgr(tmp_path, cli, local_supervisor)
+    with pytest.raises(mgr_mod.WakeError, match="already exists"):
+        run(m.ensure_up())
+    assert not any(c[0] == "new" for c in cli.calls)
+    st = m.store.load()
+    assert st.stage == "unknown" and st.endpoint == "gpu-a100-orphan"
+
+
+def test_interrupted_stop_is_resumed_on_next_call(tmp_path, local_supervisor):
+    """Faz 5: a cancel left state 'stopping'; the next ensure_up must finish the stop first."""
+    cli = FakeCli()
+    cli.assigned["colab-delegate"] = "gpu-a100-half"
+    m = make_mgr(tmp_path, cli, local_supervisor)
+    with m.store.update() as s:
+        s.stage, s.session_name, s.endpoint, s.started_at = "stopping", "colab-delegate", "gpu-a100-half", time.time()
+
+    async def go():
+        ready_soon(m, 2.0)
+        return await m.ensure_up(), list(cli.calls)
+    r, calls = run(go())
+    assert calls[0] == ("stop", "colab-delegate")                 # the interrupted stop is finished FIRST
+    assert r["cold_started"] is True and len([c for c in calls if c[0] == "new"]) == 1
 
 
 def test_unknown_identity_blocks_new_allocation_until_resolved(tmp_path, local_supervisor):

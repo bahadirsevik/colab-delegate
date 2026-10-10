@@ -391,6 +391,19 @@ aynı araçla sıcak çağrı (budget.py). T0 17:56:26, bakiye 195.66.
 
 Ayrıca: TaskStop sonrası `_cold_start` iptal yolu state'i "stopping"da bıraktı ve dakikalarca atamayı
 düşürmedi; `colab_sleep` elle çağrılınca kapandı. Düzeltme yapılmadı (deney kaydı); README'deki açık sınır
-cümlesi korunuyor. Önerilen düzeltmeler: sessions_json için betik dosyası üzerinden okuma (tırnaksız) veya
+cümlesi korunuyor.
+
+### Faz 5 düzeltmeleri (GPU'suz, 2026-10-10)
+
+| Kök neden | Düzeltme | Doğrulama |
+|---|---|---|
+| WSL köprüsü tırnakları bozuyor (`[ -f "$f" ]` hep yanlış) | `bridge_shell` betiği **base64** ile taşıyor (`echo <b64> \| base64 -d \| bash`); argv'de tırnak yok. Aynı yol `ssh_forward.stop` ve `write_ssh_config`'i de korur | Gerçek WSL'de `experiments/faz5/bridge_probe.py`: `QUOTED_OK`, `[a b]`, tek tırnak, iç içe `$( )` hepsi korundu; birim testi `test_bridge_shell_encodes_script_base64` |
+| `parse_sessions` adlı satırları (`[name] endpoint \| ...`) tanımıyordu | Regex gerçek 0.7.4 formatına göre yeniden yazıldı; adlı satır artık ad **ve** endpoint verir. `endpoint_by_name()` eklendi; `endpoint_of()` önce `colab sessions`'a bakar, `sessions.json` yalnız yedek | Gerçek çıktıyla `test_parse_sessions_untracked_and_tracked_real_format`, `test_is_assigned_by_name_and_endpoint_by_name_real_format` |
+| İkinci tahsis mümkündü | **Sert koruma:** `colab new` öncesi backend'de aynı adlı oturum varsa `WakeError` (kimlik state'e yazılır, kullanıcıya `down` denir); sorgu başarısızsa da tahsis yok | `test_never_allocates_while_backend_lists_our_session` (olayın birebir simülasyonu: endpoint yok, tünel ölü, backend canlı), `test_cold_start_guard_refuses_when_name_exists` |
+| İptal `stopping`'de bırakıyordu | `ensure_up` `stopping` görürse önce `sleep()`'i tamamlar (self-healing); `status` artık `starting`'de de gözetmen durumunu gösterir | `test_interrupted_stop_is_resumed_on_next_call` |
+
+Deneyin kendisi başarılıydı (soğuk çağrı, arka plana alınma, diff, kapanış); başarısız olan sıcak çağrının
+nedeni yukarıdaki iki hata. README'deki sınır cümlesi, düzeltilmiş kodla sıcak çağrı da gözlenene kadar
+korunuyor. Bir sonraki gerçek kullanımda beklenen: ikinci çağrı `cold_started=false` ve saniyeler içinde. Önerilen düzeltmeler: sessions_json için betik dosyası üzerinden okuma (tırnaksız) veya
 `colab sessions` çıktısını tek kaynak yapmak; `_SESS` regex'ini adlı satırlarla test etmek; sıcak yolu
 GPU açmadan sahte CLI çıktısıyla regresyona bağlamak.

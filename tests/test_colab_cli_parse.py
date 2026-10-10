@@ -11,16 +11,23 @@ from colab_delegate.lifecycle.colab_cli import (
     parse_usage,
 )
 
+# Real colab 0.7.4 output (Faz 5): tracked rows print "[name] endpoint | ...", untracked rows "[?] endpoint | ..."
 SESSIONS = """[?] m-s-kkb-use1d1-ciubss1anq7b | Hardware: CPU | Shape: Standard | Variant: DEFAULT
-cdgpu | Hardware: A100 | Shape: Standard | Variant: GPU
+[colab-delegate] gpu-a100-s-kkb-ass1c0-32chlvwqmb0nz | Hardware: A100 | Shape: Standard | Variant: GPU
 """
 
 
-def test_parse_sessions_untracked_and_named():
+def test_parse_sessions_untracked_and_tracked_real_format():
     rows = parse_sessions(SESSIONS)
     assert len(rows) == 2
     assert rows[0].name is None and rows[0].endpoint == "m-s-kkb-use1d1-ciubss1anq7b" and rows[0].hardware == "CPU"
-    assert rows[1].name == "cdgpu" and rows[1].endpoint is None and rows[1].hardware == "A100" and rows[1].variant == "GPU"
+    assert rows[1].name == "colab-delegate" and rows[1].endpoint == "gpu-a100-s-kkb-ass1c0-32chlvwqmb0nz"
+    assert rows[1].hardware == "A100" and rows[1].variant == "GPU"
+
+
+def test_parse_sessions_legacy_named_row_without_endpoint():
+    rows = parse_sessions("cdgpu | Hardware: A100 | Shape: Standard | Variant: GPU\n")
+    assert rows[0].name == "cdgpu" and rows[0].endpoint is None
 
 
 def test_parse_sessions_ignores_noise():

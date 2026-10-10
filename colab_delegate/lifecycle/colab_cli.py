@@ -59,21 +59,38 @@ class CmdResult:
     argv: list[str] = field(default_factory=list)
 
 
-_SESS = re.compile(r"^(?:\[\?\]\s+(?P<ep>\S+)|(?P<name>[^|\[\]]+?))\s*\|\s*Hardware:\s*(?P<hw>[^|]+?)\s*\|\s*Shape:\s*(?P<shape>[^|]+?)\s*\|\s*Variant:\s*(?P<var>\S+)")
+# Real formats (colab 0.7.4):
+#   [?] m-s-kkb-use1d1-ciubss1anq7b | Hardware: CPU | Shape: Standard | Variant: DEFAULT     (untracked)
+#   [colab-delegate] gpu-a100-s-kkb-ass1c0-xyz | Hardware: A100 | Shape: Standard | Variant: GPU  (tracked)
+# Faz 5 finding: tracked rows carry BOTH the name (in brackets) and the endpoint; the old regex only
+# matched "[?] ep" or "name |", so live tracked runtimes were invisible -> a second GPU was allocated.
+_SESS = re.compile(
+    r"^\[(?P<name>[^\]]*)\]\s+(?P<ep>\S+)\s*\|\s*Hardware:\s*(?P<hw>[^|]+?)\s*\|\s*Shape:\s*(?P<shape>[^|]+?)"
+    r"\s*\|\s*Variant:\s*(?P<var>\S+)"
+)
+_SESS_LEGACY = re.compile(
+    r"^(?P<name>[^|\[\]]+?)\s*\|\s*Hardware:\s*(?P<hw>[^|]+?)\s*\|\s*Shape:\s*(?P<shape>[^|]+?)\s*\|\s*Variant:\s*(?P<var>\S+)"
+)
 
 
 def parse_sessions(text: str) -> list[SessionRow]:
     rows = []
     for line in text.splitlines():
-        m = _SESS.match(line.strip())
-        if not m:
+        s = line.strip()
+        m = _SESS.match(s)
+        if m:
+            name = m.group("name").strip()
+            rows.append(SessionRow(
+                name=None if name in ("", "?") else name, endpoint=m.group("ep"),
+                hardware=m.group("hw").strip(), shape=m.group("shape").strip(), variant=m.group("var").strip(),
+                raw=s))
             continue
-        rows.append(SessionRow(
-            name=(m.group("name") or "").strip() or None,
-            endpoint=m.group("ep"),
-            hardware=m.group("hw").strip(), shape=m.group("shape").strip(), variant=m.group("var").strip(),
-            raw=line.strip(),
-        ))
+        m = _SESS_LEGACY.match(s)
+        if m:
+            rows.append(SessionRow(
+                name=m.group("name").strip() or None, endpoint=None,
+                hardware=m.group("hw").strip(), shape=m.group("shape").strip(), variant=m.group("var").strip(),
+                raw=s))
     return rows
 
 
@@ -143,11 +160,16 @@ class ColabCli:
         return CmdResult(r.returncode, r.stdout or "", r.stderr or "", argv)
 
     def bridge_shell(self, script: str, timeout: float = 120.0) -> CmdResult:
-        """Run a bash snippet in the same environment as the CLI (WSL or native)."""
+        """Run a bash snippet in the same environment as the CLI (WSL or native).
+        The script travels base64-encoded: wsl.exe/Windows argv handling mangles quotes
+        (Faz 5 finding: `[ -f "$f" ]` always false through the bridge)."""
+        import base64
+        b64 = base64.b64encode(script.encode("utf-8")).decode("ascii")
+        wrapper = f"echo {b64} | base64 -d | bash"
         if self.backend == "wsl":
-            argv = ["wsl.exe", "-d", self.cfg.wsl_distro, "-u", self.cfg.wsl_user, "--", "bash", "-lc", script]
+            argv = ["wsl.exe", "-d", self.cfg.wsl_distro, "-u", self.cfg.wsl_user, "--", "bash", "-lc", wrapper]
         else:
-            argv = ["bash", "-lc", script]
+            argv = ["bash", "-lc", wrapper]
         r = subprocess.run(argv, capture_output=True, text=True, encoding="utf-8", errors="replace",
                            timeout=timeout, env=dict(os.environ, WSL_UTF8="1"))
         return CmdResult(r.returncode, r.stdout or "", r.stderr or "", argv)
@@ -244,6 +266,10 @@ class ColabCli:
         return d
 
     def endpoint_of(self, name: str) -> str | None:
+        """Identity of our session: `colab sessions` first (authoritative), sessions.json as fallback."""
+        ep = self.endpoint_by_name(name)
+        if ep:
+            return ep
         try:
             return (self.sessions_json().get(name) or {}).get("endpoint")
         except ColabCliError:
@@ -264,6 +290,16 @@ class ColabCli:
         except ColabCliError:
             return None
         return name in sj
+
+    def endpoint_by_name(self, name: str) -> str | None:
+        """Endpoint of a tracked session straight from `colab sessions` (authoritative, no sessions.json)."""
+        try:
+            for r in self.sessions():
+                if r.name == name and r.endpoint:
+                    return r.endpoint
+        except ColabCliError:
+            return None
+        return None
 
     def is_assigned(self, endpoint: str) -> bool | None:
         """Runtime-identity check: True/False from the backend; None when the query itself failed

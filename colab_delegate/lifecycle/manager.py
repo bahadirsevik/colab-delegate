@@ -86,6 +86,11 @@ class RuntimeManager:
                 await progress(m)
 
         st = self.store.load()
+        if st.stage == "stopping":
+            # a previous stop was interrupted (cancel / crash): finish it before anything else
+            await say("previous stop was interrupted; finishing it first")
+            await self.sleep(reason="resume_stop")
+            st = self.store.load()
         if st.endpoint:
             # ANY recorded identity (ready / unknown / starting / stopping) must be resolved against the
             # backend before a new allocation is even considered.
@@ -134,6 +139,19 @@ class RuntimeManager:
         dec = can_wake(usage.balance, st, cfg.lifecycle, cfg.colab.gpu)
         if not dec.ok:
             raise WakeError(f"refusing to wake: {dec.reason}")
+        # HARD GUARD (Faz 5): never allocate while the backend still lists a session with our name.
+        # `colab new -s NAME` on an existing name silently re-points the local record and orphans the old VM.
+        live = await asyncio.to_thread(self.cli.is_assigned_by_name, self.session)
+        if live is None:
+            raise WakeError(f"cannot query Colab sessions before allocating '{self.session}'; refusing to start")
+        if live:
+            ep = await asyncio.to_thread(self.cli.endpoint_by_name, self.session)
+            with self.store.update() as s:
+                s.stage, s.session_name, s.endpoint = "unknown", self.session, ep or s.endpoint
+                s.started_at = s.started_at or time.time()
+                s.last_error = f"session '{self.session}' already exists on the backend ({ep}); not allocating a second one"
+            raise WakeError(f"session '{self.session}' already exists on the backend ({ep}); "
+                            "run `colab-delegate down` (or colab_sleep) and retry")
         await say(f"waking Colab {cfg.colab.gpu} (balance {usage.balance:.1f} units)")
         t0 = time.time()
         gpus = [cfg.colab.gpu, *cfg.colab.gpu_fallback]
@@ -360,7 +378,7 @@ class RuntimeManager:
     # ---------- status ----------
     async def status(self) -> dict:
         st = self.store.load()
-        sup = await self.supervisor_status() if st.stage == "ready" else None
+        sup = await self.supervisor_status() if st.stage in ("ready", "starting") else None
         out = {"stage": st.stage, "endpoint": st.endpoint, "gpu": st.gpu, "session": st.session_name,
                "uptime_minutes": round((time.time() - st.started_at) / 60, 1) if st.started_at and st.stage == "ready" else None,
                "active_jobs": self._active_jobs, "cold_starts_today": st.cold_starts_today(),
