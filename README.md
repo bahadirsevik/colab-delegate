@@ -7,8 +7,10 @@ wasted. The remote model is **read-only**: it returns proposed diffs that Claude
 
 Status: **v0.1.0 (early release).** Lifecycle validated on CPU and A100 runtimes; `colab_delegate`
 run on a real A100 (warmed via the CLI) with three real refactoring tasks: 3/3 diffs applied cleanly and
-were correct, ~1.4 compute units including the 12-minute cold start. A single cold `colab_delegate` call
-from inside Claude Code is not yet exercised end-to-end (see `docs/phase0-findings.md`).
+were correct, ~1.4 compute units including the 12-minute cold start. A cold `colab_delegate` call from
+inside Claude Code was exercised end-to-end (wake, auto-backgrounding, diff delivery); the follow-up warm
+call exposed a double-allocation bug fixed in v0.1.1. The cold → warm chain (same endpoint, no second
+allocation, verified release) has not yet been observed with v0.1.1 (see `docs/phase0-findings.md`).
 
 ## What you get
 
