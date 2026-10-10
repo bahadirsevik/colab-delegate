@@ -32,13 +32,18 @@ Measured on A100 40GB (2026-10): ~5.2 compute units/hour, cold start 11.5 min (Q
 
 ## Quick start
 
+Not on PyPI yet; install from a clone:
+
 ```bash
 uv tool install google-colab-cli && colab --auth oauth2 usage     # one-time login (copy-paste flow)
-pip install colab-delegate
+git clone https://github.com/<you>/colab-delegate && cd colab-delegate
+python -m pip install .                                           # or: pip install -e ".[dev]" to hack on it
 colab-delegate init --profile a100-qwen3.8-27b
 colab-delegate doctor
 claude mcp add colab-delegate -- colab-delegate mcp
 ```
+
+On Windows the Colab CLI lives in WSL; see `docs/windows-wsl2.md`.
 
 In Claude Code:
 

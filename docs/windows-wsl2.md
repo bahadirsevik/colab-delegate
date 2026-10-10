@@ -21,7 +21,8 @@ The token lands in `~/.config/colab-cli/token.json` inside WSL.
 Then on Windows:
 
 ```powershell
-pip install colab-delegate            # or: uv tool install colab-delegate
+git clone https://github.com/<you>/colab-delegate; cd colab-delegate
+python -m pip install .               # not on PyPI yet
 colab-delegate init --profile a100-qwen3.8-27b
 colab-delegate doctor                 # checks WSL, CLI, auth, ssh key
 claude mcp add colab-delegate -- colab-delegate mcp
