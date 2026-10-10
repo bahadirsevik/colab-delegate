@@ -27,16 +27,19 @@ class RuntimeState:
     tunnel_pid: int | None = None
 
     def cold_starts_today(self, now: float | None = None) -> int:
+        """Count cold starts that occurred within the last 24 hours."""
         now = now or time.time()
         return sum(1 for t in self.cold_starts if now - t < 86400)
 
 
 class StateStore:
     def __init__(self, path: Path | None = None):
+        """Initialize the store, creating the parent directory if needed."""
         self.path = path or (HOME_DIR / "state.json")
         self.path.parent.mkdir(parents=True, exist_ok=True)
 
     def load(self) -> RuntimeState:
+        """Load state from disk, returning a fresh state if missing or unreadable."""
         if not self.path.exists():
             return RuntimeState()
         try:
@@ -46,12 +49,14 @@ class StateStore:
             return RuntimeState(stage="unknown", last_error="state.json unreadable")
 
     def save(self, st: RuntimeState) -> None:
+        """Atomically write the given state to disk via a temp file."""
         tmp = self.path.with_suffix(f".{os.getpid()}.tmp")
         tmp.write_text(json.dumps(asdict(st), indent=2), encoding="utf-8")
         os.replace(tmp, self.path)
 
     @contextmanager
     def update(self):
+        """Context manager that yields loaded state and saves it on exit."""
         st = self.load()
         yield st
         self.save(st)
@@ -61,11 +66,13 @@ class FileLock:
     """Cross-process lock so two delegate calls never start two VMs (O_EXCL + stale check)."""
 
     def __init__(self, path: Path, stale_sec: float = 1800.0):
+        """Initialize the lock with its file path and stale timeout."""
         self.path = path
         self.stale_sec = stale_sec
         self._fd = None
 
     def acquire(self, timeout: float = 0.0) -> bool:
+        """Try to acquire the lock, removing stale locks and waiting up to timeout."""
         t0 = time.time()
         while True:
             try:
@@ -85,6 +92,7 @@ class FileLock:
                 time.sleep(0.5)
 
     def release(self) -> None:
+        """Release the lock by closing the fd and removing the lock file."""
         if self._fd is not None:
             os.close(self._fd)
             self._fd = None

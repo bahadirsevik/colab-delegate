@@ -358,3 +358,39 @@ _(colab usage önce/sonra)_
 ## Geçiş kararı (A100 öncesi)
 
 _(doldurulacak)_
+
+### Faz 5 — Claude Code içinden soğuk çağrı (2026-10-10)
+
+Ana oturumdan, alt-ajan kullanmadan tek bir `colab_delegate` çağrısı (state.py docstring'leri), ardından
+aynı araçla sıcak çağrı (budget.py). T0 17:56:26, bakiye 195.66.
+
+| Ölçüm | Sonuç |
+|---|---|
+| Soğuk çağrı süresi (duvar saati) | ~13.0 dk (tahsis 17:56:39 → hazır 18:09:22 = 12.7 dk; iş 35 sn). `stats.elapsed_sec` yalnız ajan döngüsünü ölçüyor (34.65 sn), uyandırmayı kapsamıyor |
+| Arka plana alınma | Evet, 120 sn'de görev kimliği verildi; beklerken `colab_status` 3 kez "starting" döndü (çıktıda `supervisor.stage` alanı yok) |
+| cold_started | true |
+| Tur / araç çağrısı / hata | 3 / 9 / 0 |
+| Diff uygulanabilirlik | 1 diff, 8 edit, `apply_check.rc` 0; `git apply --check` ve `git apply` temiz |
+| Test | `tests/test_budget_state.py` 3 passed |
+| Claude düzeltme ihtiyacı | 0. Not: model `__init__`'e docstring ekleyip `__enter__/__exit__`'i "alt çizgi" diye atladı (tutarsız ama zararsız) |
+| Sıcak çağrı süresi | **BAŞARISIZ** — ilk iş bittikten 50 sn sonra gönderilen çağrı `cold_started=true` ile İKİNCİ bir A100 açtı (aktif atama 2, 10.6 birim/saat). TaskStop ile iptal edildi; diff alınmadı |
+| Kapanış doğrulaması | `colab_sleep` → `released_verified: true` (yalnız 2. runtime'ı kapattı). 1. runtime yetim kaldı; ~18:20'de VM gözetmeninin 10 dk boşta kalma zamanlayıcısıyla kendi kendine kapandı. 18:21: aktif atama 0, oran 0, stage down |
+| Harcanan birim | 2.42 (195.66 → 193.24); planlanan ~1.5 |
+
+**Kök neden (doğrulandı, iki bağımsız hata üst üste):**
+
+1. `ColabCli.sessions_json()` WSL köprüsünden geçerken `"$f"` tırnakları bozuluyor; `[ -f "$f" ]` hep yanlış
+   dönüp `@@NOFILE@@` → `{}` veriyor (settings.json ile test edildi: dosya var, çıktı `@@NOFILE@@`). Sonuç:
+   `endpoint_of()` hep None, `state.json`'da `endpoint` hiç yazılmıyor, `ensure_up` her zaman zayıf
+   ad-tabanlı yola düşüyor.
+2. `parse_sessions()` adlı satırları (`[colab-delegate] gpu-… | Hardware: …`) eşleştiremiyor, yalnız `[?]`
+   satırlarını döndürüyor. Bu yüzden `is_assigned_by_name()` canlı ve adlı runtime için False döndü →
+   "session gone (verified by name); will cold start" → ikinci `colab new -s colab-delegate` aynı adla
+   sessions.json kaydının üstüne yazdı, ilk runtime adsız `[?]` yetime dönüştü (`colab stop` yalnız ada göre
+   durdurabiliyor; CLI geçmişinde "pruned" olayı yok).
+
+Ayrıca: TaskStop sonrası `_cold_start` iptal yolu state'i "stopping"da bıraktı ve dakikalarca atamayı
+düşürmedi; `colab_sleep` elle çağrılınca kapandı. Düzeltme yapılmadı (deney kaydı); README'deki açık sınır
+cümlesi korunuyor. Önerilen düzeltmeler: sessions_json için betik dosyası üzerinden okuma (tırnaksız) veya
+`colab sessions` çıktısını tek kaynak yapmak; `_SESS` regex'ini adlı satırlarla test etmek; sıcak yolu
+GPU açmadan sahte CLI çıktısıyla regresyona bağlamak.
